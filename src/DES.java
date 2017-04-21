@@ -225,12 +225,34 @@ public class DES {
 
     // convenience methods for performing the basic permutations.
     
-    private static long IP(long src)  { return permute(IP, 64, src);                 } // 64-bit output
-    private static long FP(long src)  { return permute(FP, 64, src);                 } // 64-bit output
-    private static long E(int src)    { return permute(E, 32, src&0xFFFFFFFFL);      } // 48-bit output
-    private static int  P(int src)    { return (int)permute(P, 32, src&0xFFFFFFFFL); } // 32-bit output
-    private static long PC1(long src) { return permute(PC1, 64, src);                } // 56-bit output
-    private static long PC2(long src) { return permute(PC2, 56, src);                } // 48-bit output
+    private static long IP(long src)  { 
+    	return permute(IP, 64, src);                 
+    	} // 64-bit output
+    
+    
+    private static long FP(long src)  { 
+    	return permute(FP, 64, src);                 
+    	} // 64-bit output
+    
+    
+    private static long E(int src)    { 
+    	return permute(E, 32, src&0xFFFFFFFFL);      
+    } // 48-bit output
+    
+    
+    private static int  P(int src)    { 
+    	return (int)permute(P, 32, src&0xFFFFFFFFL); 
+    } // 32-bit output
+    
+    
+    private static long PC1(long src) { 
+    	return permute(PC1, 64, src);                
+    } // 56-bit output
+    
+    
+    private static long PC2(long src) { 
+    	return permute(PC2, 56, src);                
+    } // 48-bit output
 
     /**
      * Permute an input value "src" of srcWidth bits according to the

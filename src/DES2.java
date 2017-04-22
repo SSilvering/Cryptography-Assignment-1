@@ -205,7 +205,7 @@ public class DES2{
 	    
 
 	    /**
-	     * this function get any input and some array, and change the input  in accordance to the array. each array contains index for the bits -
+	     * tthis function get any input and some array, and change the input  in accordance to the array. each array contains index for the bits -
 	     * so the output of the text we sent is arranged according to the indexes of the array we send to this function 
 	     * @param some input
 	     * @return  permutation of the input

@@ -389,26 +389,11 @@ public class DES2{
 	    
 	    private static byte[] passwordToKey(String password) {
 	        byte[] pwbytes = password.getBytes();
-	        byte[] key = new byte[8];
-	        for (int i=0; i<8; i++) {
-	            if (i < pwbytes.length) {
-	                byte b = pwbytes[i];
-	                // flip the byte
-	                byte b2 = 0;
-	                for (int j=0; j<8; j++) {
-	                    b2<<=1;
-	                    b2 |= (b&0x01);
-	                    b>>>=1;
-	                }
-	                key[i] = b2;
-	            } else {
-	                key[i] = 0;
-	            }
-	        }
-	        return key;
+	        return pwbytes;
 	    }
 	    
-	    /*
+	   
+	    
 	    private static int charToNibble(char c) {
 	        if (c>='0' && c<='9') {
 	            return (c-'0');
@@ -437,71 +422,20 @@ public class DES2{
 	        return sb.toString();
 	    }
 
-	   
-	    
-	    /*
-	    
-	    public static boolean test(byte[] message, byte[] expected, String password) {
-	        return test(message, expected, passwordToKey(password));
-	    }
-	     */
-	    
-		/*public static void main(String[] args) {
-	        
-			String message = "nonsense";
-			String myKey = "abababan";
-			
-	        System.out.println("\tmessage:  "+message);
-	        System.out.println("\tkey:      "+myKey);
-	        byte[] received = encrypt(parseBytes(message), parseBytes(myKey));        
-	        System.out.println("\treceived: "+DatatypeConverter.printHexBinary(received));
-	         
+	   /* public static boolean test(byte[] message, String password) {
+	        return test(message, passwordToKey(password));
 	    }*/
-	   
 	    
-	    private static int charToNibble(char c) {
-	        if (c>='0' && c<='9') {
-	            return (c-'0');
-	        } else if (c>='a' && c<='f') {
-	            return (10+c-'a');
-	        } else if (c>='A' && c<='F') {
-	            return (10+c-'A');
-	        } else {
-	            return 0;
-	        }
-	    }
-	    private static byte[] parseBytes(String s) {
-	        s = s.replace(" ", "");
-	        byte[] ba = new byte[s.length()/2];
-	        if (s.length()%2 > 0) { s = s+'0'; }
-	        for (int i=0; i<s.length(); i+=2) {
-	            ba[i/2] = (byte) (charToNibble(s.charAt(i))<<4 | charToNibble(s.charAt(i+1)));
-	        }
-	        return ba;
-	    }
-	    private static String hex(byte[] bytes) {
-	        StringBuilder sb = new StringBuilder();
-	        for (int i=0; i<bytes.length; i++) {
-	            sb.append(String.format("%02X ",bytes[i]));
-	        }
-	        return sb.toString();
-	    }
-
-	    public static boolean test(byte[] message, byte[] expected, String password) {
-	        return test(message, expected, passwordToKey(password));
-	    }
-	    
-	    private static int testCount = 0;
-	    public static boolean test(byte[] message, byte[] expected, byte[] key) {
-	        System.out.println("Test #"+(++testCount)+":");
-	        System.out.println("\tmessage:  "+hex(message));
-	        System.out.println("\tkey:      "+hex(key));
-	        System.out.println("\texpected: "+hex(expected));
+	    public static void myDES(byte[] message, byte[] key, String msg) {
+	    	
+	    	System.out.println(" The Plaintext     :"+msg);
+	        System.out.println(" The message in HEX:"+hex(message));
+	        System.out.println(" The Cypher Key    :"+hex(key));
+	        
 	        byte[] received = encrypt(message, key);
-	        System.out.println("\treceived: "+hex(received));
-	        boolean result = Arrays.equals(expected, received);
-	        System.out.println("\tverdict: "+(result?"PASS":"FAIL"));
-	        return result;
+	        
+	        System.out.println(" Cypher Text	   :"+hex(received));
+	      
 	    }
 	    
 	    
@@ -521,15 +455,11 @@ public class DES2{
 
 	    public static void main(String[] args) {
 
-	        // These tests were derived from the password challenge-response
-	        // conversations observed between a VNC client and server. 
+	     String msg = "nonsense";
+	     String key ="abcdefgh";
 	  
 	    	
-	        test(
-	            parseBytes(toHexadecimal("Salli The not normalit")),
-	            parseBytes("fa60 69b9 85fa 1cf7 0bea a041 9137 a6d3"),
-	            "mypass"
-	        		);
+	       myDES(parseBytes(toHexadecimal(msg)), passwordToKey(key),msg);
 	        
 	    }
 }

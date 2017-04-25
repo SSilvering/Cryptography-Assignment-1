@@ -1,11 +1,8 @@
 import java.io.UnsupportedEncodingException;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Base64.Encoder;
 
 import javax.xml.bind.DatatypeConverter;
 
-/**@author Sali Ben Mocha, Shay Hood**/
+/**@author Sali Ben Mocha, Shai Hod**/
 
 public class DES2{
 	
@@ -445,7 +442,6 @@ public class DES2{
 			try {
 				myBytes = text.getBytes("UTF-8");
 			} catch (UnsupportedEncodingException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 

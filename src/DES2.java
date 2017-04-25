@@ -1,6 +1,9 @@
+import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Base64.Encoder;
+
+import javax.xml.bind.DatatypeConverter;
 
 /**@author Sali Ben Mocha, Shay Hood**/
 
@@ -405,6 +408,7 @@ public class DES2{
 	        return key;
 	    }
 	    
+	    /*
 	    private static int charToNibble(char c) {
 	        if (c>='0' && c<='9') {
 	            return (c-'0');
@@ -442,7 +446,7 @@ public class DES2{
 	    }
 	     */
 	    
-		public static void main(String[] args) {
+		/*public static void main(String[] args) {
 	        
 			String message = "nonsense";
 			String myKey = "abababan";
@@ -450,11 +454,83 @@ public class DES2{
 	        System.out.println("\tmessage:  "+message);
 	        System.out.println("\tkey:      "+myKey);
 	        byte[] received = encrypt(parseBytes(message), parseBytes(myKey));        
-	        System.out.println("\treceived: "+received);
+	        System.out.println("\treceived: "+DatatypeConverter.printHexBinary(received));
 	         
-	    }
+	    }*/
 	   
 	    
+	    private static int charToNibble(char c) {
+	        if (c>='0' && c<='9') {
+	            return (c-'0');
+	        } else if (c>='a' && c<='f') {
+	            return (10+c-'a');
+	        } else if (c>='A' && c<='F') {
+	            return (10+c-'A');
+	        } else {
+	            return 0;
+	        }
+	    }
+	    private static byte[] parseBytes(String s) {
+	        s = s.replace(" ", "");
+	        byte[] ba = new byte[s.length()/2];
+	        if (s.length()%2 > 0) { s = s+'0'; }
+	        for (int i=0; i<s.length(); i+=2) {
+	            ba[i/2] = (byte) (charToNibble(s.charAt(i))<<4 | charToNibble(s.charAt(i+1)));
+	        }
+	        return ba;
+	    }
+	    private static String hex(byte[] bytes) {
+	        StringBuilder sb = new StringBuilder();
+	        for (int i=0; i<bytes.length; i++) {
+	            sb.append(String.format("%02X ",bytes[i]));
+	        }
+	        return sb.toString();
+	    }
 
+	    public static boolean test(byte[] message, byte[] expected, String password) {
+	        return test(message, expected, passwordToKey(password));
+	    }
+	    
+	    private static int testCount = 0;
+	    public static boolean test(byte[] message, byte[] expected, byte[] key) {
+	        System.out.println("Test #"+(++testCount)+":");
+	        System.out.println("\tmessage:  "+hex(message));
+	        System.out.println("\tkey:      "+hex(key));
+	        System.out.println("\texpected: "+hex(expected));
+	        byte[] received = encrypt(message, key);
+	        System.out.println("\treceived: "+hex(received));
+	        boolean result = Arrays.equals(expected, received);
+	        System.out.println("\tverdict: "+(result?"PASS":"FAIL"));
+	        return result;
+	    }
+	    
+	    
+	    public static String toHexadecimal(String text)
+	    {
+	        byte[] myBytes = null;
+			try {
+				myBytes = text.getBytes("UTF-8");
+			} catch (UnsupportedEncodingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+	        return DatatypeConverter.printHexBinary(myBytes);
+	    }
+	    
+
+	    public static void main(String[] args) {
+
+	        // These tests were derived from the password challenge-response
+	        // conversations observed between a VNC client and server. 
+	  
+	    	
+	        test(
+	            parseBytes(toHexadecimal("Salli The not normalit")),
+	            parseBytes("fa60 69b9 85fa 1cf7 0bea a041 9137 a6d3"),
+	            "mypass"
+	        		);
+	        
+	    }
 }
  

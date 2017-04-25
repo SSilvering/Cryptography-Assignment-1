@@ -15,7 +15,10 @@
  * limitations under the License.
  */
 
+import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
+
+import javax.xml.bind.DatatypeConverter;
 
 /**
  * Super-slow DES implementation for the overly patient.
@@ -578,12 +581,27 @@ public class DES {
         return result;
     }
     
+    public static String toHexadecimal(String text)
+    {
+        byte[] myBytes = null;
+		try {
+			myBytes = text.getBytes("UTF-8");
+		} catch (UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+        return DatatypeConverter.printHexBinary(myBytes);
+    }
+    
     public static void main(String[] args) {
 
         // These tests were derived from the password challenge-response
         // conversations observed between a VNC client and server. 
+  
+    	
         test(
-            parseBytes("a4b2 c9ef 0876 c1ce 438d e282 3820 dbde"),
+            parseBytes(toHexadecimal("Salli The not normalit")),
             parseBytes("fa60 69b9 85fa 1cf7 0bea a041 9137 a6d3"),
             "mypass"
         );

@@ -1,3 +1,6 @@
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Base64.Encoder;
 
 /**@author Sali Ben Mocha, Shay Hood**/
 
@@ -142,9 +145,7 @@ public class DES2{
 	  
 	  /*v is an helpful array
 	   * In places 1 2 9 16 we will update value 1 while in all other places we will update 2 */
-	    private static byte[] v = {
-	            1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1
-	        };
+	  
 	        	    
 	    /**
 	     * IP function : this function get the text that we want to encode 
@@ -212,16 +213,18 @@ public class DES2{
 	     */
 	    private static long permute(byte[] array, int inputLength, long input) {
 
-	    	  long d = 0;
+	    	  long output = 0;
 	    	  int size = array.length;
-	    	  int i,inputPos;
+	    	  int i=0,inputPlace;
 	    	  
+	    	  while(i<size)
+	    	  {
+	    		  inputPlace = inputLength - array[i];
+	    		  output = (output<<1) | (input>>inputPlace & 0x01); //shift, 0x01 on ascii is 1
+	              i++;
+	    	  }
 	    	    
-	          for (i=0; i<size; i++) {
-	              inputPos = inputLength - array[i];
-	              d = (d<<1) | (input>>inputPos & 0x01); // 0x01 on ascii is 1
-	          }
-	          return d;
+	          return output;
 		}
 
 
@@ -237,9 +240,221 @@ public class DES2{
 	    }
 	    
 	    
+	    
+	    private static long getLongFromBytes(byte[] ba, int offset) { // change bytes to a long number
+	        long l = 0;
+	        for (int i=0; i<8; i++) {
+	            byte value;
+	            if ((offset+i) < ba.length) {
+	                value = ba[offset+i];
+	            } else {
+	                value = 0;
+	            }
+	            l = l<<8 | (value & 0xFFL);
+	        }
+	        return l;
+	    }
+	    
+	    private static void getBytesFromLong(byte[] ba, int offset, long l) {// change to bytes from long
+	        for (int i=7; i>=0; i--) {
+	            if ((offset+i) < ba.length) {
+	                ba[offset+i] = (byte) (l & 0xFF);
+	                l = l >> 8;
+	            } else {
+	                break;
+	            }
+	        }
+	    }
+	    
+	    /**
+	     * The Feistel function is the heart of DES.
+	     */
+	    private static int Ffunction(int r, /* 48 bits */ long subkey) {
+	        // 1. expansion
+	        long e = E(r);
+	        // 2. key mixing
+	        long x = e ^ subkey;
+	        // 3. substitution
+	        int dst = 0;
+	        for (int i=0; i<8; i++) {
+	            dst>>>=4;
+	            int s = Sbox(8-i, (byte)(x&0x3F));
+	            dst |= s << 28;
+	            x>>=6;
+	        }
+	        // 4. permutation
+	        return P(dst);
+	    }
+	    
+	    
+	    private static long[] createSubkeys( long key) {
+	        long subkeys[] = new long[3];
+	        
+	        // perform the PC1 permutation
+	        key = PC1(key);
+	        
+	        // split into 28-bit left and right (c and d) pairs.
+	        int c = (int) (key>>28);
+	        int d = (int) (key&0x0FFFFFFF);
+	        long cd;
+	        
+	        //for the first key
+            // rotate by 1 bit
+	        c = ((c<<1) & 0x0FFFFFFF) | (c>>27);
+            d = ((d<<1) & 0x0FFFFFFF) | (d>>27);	        
+            cd = (c&0xFFFFFFFFL)<<28 | (d&0xFFFFFFFFL);
+	        
+            subkeys[0] = PC2(cd);
+            
+	        //for the second key
+            // rotate by 1 bit
+	        c = ((c<<1) & 0x0FFFFFFF) | (c>>27);
+            d = ((d<<1) & 0x0FFFFFFF) | (d>>27);	        
+            cd = (c&0xFFFFFFFFL)<<28 | (d&0xFFFFFFFFL);
+	        
+            subkeys[1] = PC2(cd);
+            
+            //for the third
+            // rotate by 2 bits
+            c = ((c<<2) & 0x0FFFFFFF) | (c>>26);
+            d = ((d<<2) & 0x0FFFFFFF) | (d>>26);	       
+            cd = (c&0xFFFFFFFFL)<<28 | (d&0xFFFFFFFFL);
+	        
+            subkeys[2] = PC2(cd);
+            
+	        return subkeys; 
+	    }
+	    
+
+	    public static long encryptBlock(long msg,long key) {
+	        
+	    	long subkeys[] = createSubkeys(key); // only 3 on our case
+	        long ip = IP(msg);
+	        
+	        // split the 32-bit value into 16-bit left and right halves.
+	        int left = (int) (ip>>32);
+	        int right = (int) (ip&0xFFFFFFFFL);
+	        
+	        // perform 16 rounds
+	        for (int i=0; i<3; i++) {
+	            int previous_l = left;
+	            // the right half becomes the new left half.
+	            left = right;
+	            // the Ffunction function is applied to the old left half
+	            // and the resulting value is stored in the right half.
+	            right = previous_l ^ Ffunction(right, subkeys[i]); //^ xor in java
+	        }
+	        
+	        
+	     // reverse the two 32-bit segments (left to right; right to left)
+	        long rl = (right&0xFFFFFFFFL)<<32 | (left&0xFFFFFFFFL);
+	        
+	        // apply the final permutation
+	        long ciphertext = IPreverse(rl);
+	        
+	        // return the ciphertext
+	        return ciphertext;
+	    }
+	    
+	    
+	    
+	    public static void encryptBlock(byte[] message,int messageOffset,byte[] ciphertext,int ciphertextOffset, byte[] key) {
+	            
+	    		long msg = getLongFromBytes(message, messageOffset);
+	            long k = getLongFromBytes(key, 0);
+	            long ctext = encryptBlock(msg, k);
+	            getBytesFromLong(ciphertext, ciphertextOffset, ctext);
+	    }
+	    
+	    
+	    public static byte[] encrypt(byte[] message, byte[] key) {
+	        byte[] ciphertext = new byte[message.length];
+
+	        // encrypt each 8-byte (64-bit) block of the message.
+	        for (int i=0; i<message.length; i+=8) {
+	            encryptBlock(message, i, ciphertext, i, key);
+	        }
+	        
+	        return ciphertext;
+	    }
+	    
+	    
+	    public static byte[] encrypt(byte[] challenge, String password) {
+	        return encrypt(challenge, passwordToKey(password));
+	    }
+	    
+	    
+	    private static byte[] passwordToKey(String password) {
+	        byte[] pwbytes = password.getBytes();
+	        byte[] key = new byte[8];
+	        for (int i=0; i<8; i++) {
+	            if (i < pwbytes.length) {
+	                byte b = pwbytes[i];
+	                // flip the byte
+	                byte b2 = 0;
+	                for (int j=0; j<8; j++) {
+	                    b2<<=1;
+	                    b2 |= (b&0x01);
+	                    b>>>=1;
+	                }
+	                key[i] = b2;
+	            } else {
+	                key[i] = 0;
+	            }
+	        }
+	        return key;
+	    }
+	    
+	    private static int charToNibble(char c) {
+	        if (c>='0' && c<='9') {
+	            return (c-'0');
+	        } else if (c>='a' && c<='f') {
+	            return (10+c-'a');
+	        } else if (c>='A' && c<='F') {
+	            return (10+c-'A');
+	        } else {
+	            return 0;
+	        }
+	    }
+	    private static byte[] parseBytes(String s) {
+	        s = s.replace(" ", "");
+	        byte[] ba = new byte[s.length()/2];
+	        if (s.length()%2 > 0) { s = s+'0'; }
+	        for (int i=0; i<s.length(); i+=2) {
+	            ba[i/2] = (byte) (charToNibble(s.charAt(i))<<4 | charToNibble(s.charAt(i+1)));
+	        }
+	        return ba;
+	    }
+	    private static String hex(byte[] bytes) {
+	        StringBuilder sb = new StringBuilder();
+	        for (int i=0; i<bytes.length; i++) {
+	            sb.append(String.format("%02X ",bytes[i]));
+	        }
+	        return sb.toString();
+	    }
+
+	   
+	    
+	    /*
+	    
+	    public static boolean test(byte[] message, byte[] expected, String password) {
+	        return test(message, expected, passwordToKey(password));
+	    }
+	     */
+	    
 		public static void main(String[] args) {
 	        
+			String message = "nonsense";
+			String myKey = "abababan";
+			
+	        System.out.println("\tmessage:  "+message);
+	        System.out.println("\tkey:      "+myKey);
+	        byte[] received = encrypt(parseBytes(message), parseBytes(myKey));        
+	        System.out.println("\treceived: "+received);
+	         
 	    }
+	   
+	    
 
 }
  

@@ -211,8 +211,8 @@ public class DES {
     };
     
     /**
-     * Subkey Rotations.  Part of the subkey generation process
-     * involves rotating certain bit-sections of the keystuff by either
+     * Sub key Rotations.  Part of the sub-key generation process
+     * involves rotating certain bit-sections of the key stuff by either
      * one or two bits to the left.  This table specifies how many bits
      * to rotate left for each of the 16 steps.
      */

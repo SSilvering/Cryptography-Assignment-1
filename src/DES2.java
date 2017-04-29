@@ -52,7 +52,7 @@ public class DES2{
 			12, 13, 12, 13, 14, 15, 16, 17,
 			16, 17, 18, 19, 20, 21, 20, 21,
 			22, 23, 24, 25, 24, 25, 26, 27,
-			28, 29, 28, 29, 30, 31, 32, 1 
+			28, 29, 28, 29, 30, 31, 32,  1 
 			
 	};
 
@@ -68,13 +68,6 @@ public class DES2{
 			19, 13, 30,  6, 22, 11,  4, 25 
 			
 	};
-	    
-	    /*
-	     * Substitution Boxes are part from the F(Feistel) function;
-	     *They are perform bit substitutions according to this array - there are 8 tables at this array.  
-	     * the value is splited into 6-bit sections, and each section is permuted
-	     * into a different s box according to these eight tables. (One table for each section.)
-	     */
 	
 	/**
 	 * Substitution Boxes are part from the Feistel function.
@@ -246,100 +239,120 @@ public class DES2{
 	}
 
 	/**
-	 * This function gets a 6-bits input and an S-BOX number, 
-	 * and returns the desired value from the specific table.
+	 * This function gets a 6-bits input and an S-BOX number, and returns the
+	 * desired value from the specific table.
 	 * 
-	 * @param boxNumber - Number of specific S-BOX.
-	 * @param input - 6-bits of input, part of the whole plain text.
+	 * @param boxNumber
+	 *            - Number of specific S-BOX.
+	 * @param input
+	 *            - 6-bits of input, part of the whole plain text.
 	 * @return the value in the table that fits to the specific bit.
 	 */
 	private static byte Sbox(int boxNumber, byte input) {
 
 		input = (byte) (input & 0x20 | ((input & 0x01) << 4) | ((input & 0x1E) >> 1));
 		return S[boxNumber - 1][input];
-	}
-	    
+	}    
 	
 	/**
-	 * This function performs a conversion operation between Byte to Long.
+	 * This function performs a conversion operation between 8-byte long to 64-byte.
+	 * If the number is less than 8 bytes, it will pad the missing bytes with zeros.
 	 * 
-	 * @param ba - Input in bytes.
-	 * @param ofset - Quantity of bytes to trim.
+	 * @param ba
+	 *            - input in bytes.
+	 * @param ofset
+	 *            - starting point
 	 * @return input as long.
 	 */
 	private static long getLongFromBytes(byte[] ba, int ofset) { // change bytes to a long number
 		long l = 0;
 
 		int i = 0;
-		do{
+		do {
 			byte value;
-			
+
 			if (ba.length > (i + ofset)) {
 				value = ba[i + ofset];
 			} else {
 				value = 0;
 			}
-			
-			l = (0xFFL & value)| l << 8;
-			
+
+			l = (0xFFL & value) | l << 8;
+
 			i++;
-		}while (i<8);
-		
+		} while (i < 8);
+
 		return l;
 	}
-	
+
 	/**
-	 * This function performs a conversion operation between Long to Byte.
+	 * This function performs a conversion operation between 64-byte long to 8-byte.
+	 * If there are not eight bytes that start at the offset point, 
+	 * the remaining bytes are discarded.
 	 * 
-	 * @param ba - Input in long.
-	 * @param ofset - Quantity of bytes to add.
-	 * @param l - input as byte.
+	 * @param ba
+	 *            - Input in long.
+	 * @param ofset
+	 *            - starting point.
+	 * @param l
+	 *            - input as byte.
 	 */
 	private static void getBytesFromLong(byte[] ba, int ofset, long l) { // change to bytes from long
 		int i = 8;
-		
-		do{
+
+		do {
 			i--;
-			
+
 			if (ba.length > (ofset + i)) {
 				ba[i + ofset] = (byte) (0xFF & l);
 				l = l >> 8;
 			} else {
 				break;
 			}
-			
-		}while (i>+0);
+
+		} while (i > +0);
 	}
 
 	/**
-	 * This is the main function of DES encryption, 
-	 * it works according to the Feistel principle as known as Feistel network.
+	 * This is the main function of DES encryption, it works according to the
+	 * Feistel principle as known as Feistel network.
 	 * 
-	 * @param r - number of current round.
-	 * @param subkey - key for the current round.
+	 * @param r
+	 *            - number of current bit position.
+	 * @param subkey
+	 *            - key for the current round.
 	 * @return encrypted bit.
 	 */
-	private static int Ffunction(int r, /* 48 bits */ long subkey) {
+	private static int Ffunction(int pos, /* 48 bits */ long subkey) {
 		// 1. expansion
-		long e = E(r);
+		long exp = E(pos);
+
 		// 2. key mixing
-		long x = e ^ subkey;
+		long x = exp ^ subkey;
+
 		// 3. substitution
-		int dst = 0;
-		for (int i = 0; i < 8; i++) {
-			dst >>>= 4;
-			int s = Sbox(8 - i, (byte) (x & 0x3F));
-			dst |= s << 28;
-			x >>= 6;
-		}
+		int i = 0, dst = 0;
+
+		do {
+			dst >>>= 4; // unsigned right shift, it avoids overflows.
+						// performs right shift and fills with zeroes.
+			
+			int s = Sbox(8 - i, (byte) (0x3F & x));
+			dst |= s << 28; // left shift
+			x >>= 6; 		// advanced to the next bits in the sub key.
+			i++;
+		} while (i < 8);
+
 		// 4. permutation
 		return P(dst);
 	}
 
 	/***
+	 * This function creates sub-keys from the original key for each round.
 	 * 
 	 * @param key
-	 * @return
+	 *            - the original key.
+	 * @return an array of sub-keys.
 	 */
 	private static long[] createSubkeys(long key) {
 		long subkeys[] = new long[3];
@@ -352,90 +365,103 @@ public class DES2{
 		int d = (int) (key & 0x0FFFFFFF);
 		long cd;
 
+		/*****************************************************/
 		// for the first key
 		// rotate by 1 bit
 		c = ((c << 1) & 0x0FFFFFFF) | (c >> 27);
 		d = ((d << 1) & 0x0FFFFFFF) | (d >> 27);
 		cd = (c & 0xFFFFFFFFL) << 28 | (d & 0xFFFFFFFFL);
 
-		subkeys[0] = PC2(cd);
+		subkeys[0] = PC2(cd); // assignment sub-key.
 
+		/*****************************************************/
 		// for the second key
 		// rotate by 1 bit
 		c = ((c << 1) & 0x0FFFFFFF) | (c >> 27);
 		d = ((d << 1) & 0x0FFFFFFF) | (d >> 27);
 		cd = (c & 0xFFFFFFFFL) << 28 | (d & 0xFFFFFFFFL);
 
-		subkeys[1] = PC2(cd);
+		subkeys[1] = PC2(cd); // assignment sub-key.
 
+		/*****************************************************/
 		// for the third
 		// rotate by 2 bits
 		c = ((c << 2) & 0x0FFFFFFF) | (c >> 26);
 		d = ((d << 2) & 0x0FFFFFFF) | (d >> 26);
 		cd = (c & 0xFFFFFFFFL) << 28 | (d & 0xFFFFFFFFL);
 
-		subkeys[2] = PC2(cd);
+		subkeys[2] = PC2(cd); // assignment sub-key.
 
 		return subkeys;
 	}
 
 	/***
+	 * This function is responsible for encrypting part of (8-bits) the text
+	 * that is received as a uniform data block.
 	 * 
 	 * @param msg
+	 *            - plain text in bytes.
 	 * @param key
-	 * @return
+	 *            - encryption key in bytes.
+	 * @return the cipher text in bytes.
 	 */
 	public static long encryptBlock(long msg, long key) {
 
-		long subkeys[] = createSubkeys(key); // only 3 on our case
+		long subkeys[] = createSubkeys(key); // only 3 in our case
 		long ip = IP(msg);
 
 		// split the 32-bit value into 16-bit left and right halves.
 		int left = (int) (ip >> 32);
 		int right = (int) (ip & 0xFFFFFFFFL);
 
-		// perform 16 rounds
+		// perform 3 rounds
 		for (int i = 0; i < 3; i++) {
 			int previous_l = left;
-			// the right half becomes the new left half.
+			// performs a right-to-left inversion.
 			left = right;
-			// the Ffunction function is applied to the old left half
+			// Ffunction function is applied to the old left half
 			// and the resulting value is stored in the right half.
-			right = previous_l ^ Ffunction(right, subkeys[i]); // ^ xor in java
+			right = previous_l ^ Ffunction(right, subkeys[i]); // ^ XOR operation in java.
 		}
 
-		// reverse the two 32-bit segments (left to right; right to left)
+		// reverse the two 32-bit segments (left to right; right to left).
 		long rl = (right & 0xFFFFFFFFL) << 32 | (left & 0xFFFFFFFFL);
 
-		// apply the final permutation
+		// apply the final permutation.
 		long ciphertext = IPreverse(rl);
 
-		// return the ciphertext
+		// return the cipher text.
 		return ciphertext;
 	}
 	
 	/***
+	 * This function, convert the longs that received to bytes array.
 	 * 
 	 * @param message
+	 *            - original message by long number.
 	 * @param messageOffset
+	 *            - fixed bytes for array.
 	 * @param ciphertext
+	 *            - array for cipher text.
 	 * @param ciphertextOffset
+	 *            - fixed bytes array.
 	 * @param key
+	 *            - specific key for current round.
 	 */
-	public static void encryptBlock(byte[] message, int messageOffset, byte[] ciphertext, int ciphertextOffset,
-			byte[] key) {
+	public static void encryptBlock(byte[] msg, int msgOffset, byte[] ciphertext, int ciphertextOffset, byte[] key) {
 
-		long msg = getLongFromBytes(message, messageOffset);
-		long k = getLongFromBytes(key, 0);
-		long ctext = encryptBlock(msg, k);
+		long ctext = encryptBlock(getLongFromBytes(msg, msgOffset), getLongFromBytes(key, 0)); // 3 functions.
 		getBytesFromLong(ciphertext, ciphertextOffset, ctext);
 	}
 
 	/***
+	 * This function separately encrypts each 8-bit bit of 64-bit input.
 	 * 
 	 * @param message
+	 *            - original message in bytes.
 	 * @param key
-	 * @return
+	 *            - original key in bytes.
+	 * @return cipher text.
 	 */
 	public static byte[] encrypt(byte[] message, byte[] key) {
 		byte[] ciphertext = new byte[message.length];
@@ -449,31 +475,24 @@ public class DES2{
 	}
 
 	/***
+	 * This function converts the received key to bytes.
 	 * 
-	 * @param challenge
 	 * @param password
-	 * @return
+	 *            - original key.
+	 * @return key in bytes.
 	 */
-	public static byte[] encrypt(byte[] challenge, String password) {
-		return encrypt(challenge, passwordToKey(password));
+	private static byte[] passToKey(String pass) {		
+		return pass.getBytes();
 	}
 
 	/***
-	 * 
-	 * @param password
-	 * @return
-	 */
-	private static byte[] passwordToKey(String password) {
-		byte[] pwbytes = password.getBytes();
-		return pwbytes;
-	}
-
-	/***
+	 * This function converts input received as hexadecimal to decimal.
 	 * 
 	 * @param c
-	 * @return
+	 *            - string as hexadecimal.
+	 * @return an integer thats represents the specific character.
 	 */
-	private static int charToNibble(char c) {
+	private static int Hex2Decimal(char c) {
 		if (c >= '0' && c <= '9') {
 			return (c - '0');
 		} else if (c >= 'a' && c <= 'f') {
@@ -486,26 +505,31 @@ public class DES2{
 	}
 
 	/***
+	 * This function analyzes the received string and converts it to
+	 * hexadecimal.
 	 * 
 	 * @param s
-	 * @return
+	 *            - original string.
+	 * @return the string converted to hexadecimal.
 	 */
 	private static byte[] parseBytes(String s) {
-		s = s.replace(" ", "");
+		s = s.replace(" ", ""); // cutting spaces.
 		byte[] ba = new byte[s.length() / 2];
 		if (s.length() % 2 > 0) {
 			s = s + '0';
 		}
 		for (int i = 0; i < s.length(); i += 2) {
-			ba[i / 2] = (byte) (charToNibble(s.charAt(i)) << 4 | charToNibble(s.charAt(i + 1)));
+			ba[i / 2] = (byte) (Hex2Decimal(s.charAt(i)) << 4 | Hex2Decimal(s.charAt(i + 1)));
 		}
 		return ba;
 	}
 
 	/***
+	 * This function creates an hexadecimal string from bytes array.
 	 * 
 	 * @param bytes
-	 * @return
+	 *            - bytes array.
+	 * @return an hexadecimal representation of the bytes array.
 	 */
 	private static String hex(byte[] bytes) {
 		StringBuilder sb = new StringBuilder();
@@ -515,33 +539,30 @@ public class DES2{
 		return sb.toString();
 	}
 
-	/*
-	 * public static boolean test(byte[] message, String password) { return
-	 * test(message, passwordToKey(password)); }
-	 */
-
 	/***
+	 * This function is print representation method.
 	 * 
 	 * @param message
+	 *            - hexadecimal representation of the original message.
 	 * @param key
+	 *            - hexadecimal representation of the original key.
 	 * @param msg
+	 *            - original message.
 	 */
 	public static void myDES(byte[] message, byte[] key, String msg) {
 
-		System.out.println(" The Plaintext     :" + msg);
-		System.out.println(" The message in HEX:" + hex(message));
-		System.out.println(" The Cypher Key    :" + hex(key));
-
-		byte[] received = encrypt(message, key);
-
-		System.out.println(" Cypher Text	   :" + hex(received));
+		System.out.println(" The Plaintext      :" + msg);
+		System.out.println(" The message in HEX :" + hex(message));
+		System.out.println(" The Cypher Key     :" + hex(key));
+		System.out.println(" Cypher Text	    :" + hex(encrypt(message, key)));
 
 	}
 
 	/***
+	 * This function converts from string to hexadecimal string representation.
 	 * 
 	 * @param text
-	 * @return
+	 * @return hexadecimal string representation.
 	 */
 	public static String toHexadecimal(String text) {
 		byte[] myBytes = null;
@@ -555,14 +576,14 @@ public class DES2{
 	}
 
 	/***
-	 * This main function.
+	 * The main function.
 	 */
 	public static void main(String[] args) {
 
 		String msg = "nonsense";
 		String key = "abcdefgh";
 
-		myDES(parseBytes(toHexadecimal(msg)), passwordToKey(key), msg);
+		myDES(parseBytes(toHexadecimal(msg)), passToKey(key), msg);
 	}
 }
  

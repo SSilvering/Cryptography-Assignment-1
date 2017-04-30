@@ -575,15 +575,29 @@ public class DES2{
 		return DatatypeConverter.printHexBinary(myBytes);
 	}
 
+	
+	public static void bruteForce(String plaintext, String ciphertext){
+		String key = "aaaaaaaa";
+		
+		
+
+		while (key=="zzzzzzzz"){
+			String temp = hex(encrypt(parseBytes(toHexadecimal(plaintext)), passToKey(key)));
+		}
+	}
+
 	/***
 	 * The main function.
 	 */
 	public static void main(String[] args) {
 
-		String msg = "nonsense";
+		String message = "nonsense";
+		String ciphertext = "D8 16 42 28 F2 90 CB AF";
 		String key = "abcdefgh";
 
-		myDES(parseBytes(toHexadecimal(msg)), passToKey(key), msg);
+		bruteForce(message, ciphertext);
+		
+//		myDES(parseBytes(toHexadecimal(message)), passToKey(key), message);
 	}
 }
  
